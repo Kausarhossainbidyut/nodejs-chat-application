@@ -5,9 +5,10 @@ const router = express.Router()
 
 // internal import 
 const {getUsers} = require('../controller/usersController')
+const decorateHtmlResponse = require('../middlewares/common/decorateHtmlResponse')
 
-// login page
-router.get("/", getUsers)
+// Users page
+router.get("/",decorateHtmlResponse("Users"), getUsers)
 
 
 module.exports = router
