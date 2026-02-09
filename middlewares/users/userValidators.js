@@ -25,8 +25,8 @@ const addUserValidators = [
         if (user) {
           throw createError("Email already is use~!");
         }
-      } catch {
-        throw createError(err.message);
+      } catch (error) {
+        throw createError(error.message);
       }
     }),
   check("mobile")
@@ -40,8 +40,8 @@ const addUserValidators = [
         if (user) {
           throw createError("Mobile already is use!");
         }
-      } catch {
-        throw createError(err.message);
+      } catch (error) {
+        throw createError(error.message);
       }
     }),
   check("password")
