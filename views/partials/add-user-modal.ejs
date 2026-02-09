@@ -1,29 +1,32 @@
 <div class="modal-wrapper" id="add-user-modal">
   <div class="modal">
     <a href="#" onclick="closeModal()" class="modal-close">+</a>
+
     <div class="modal-title">
       <h2>Create New User</h2>
     </div>
+
     <div class="modal-body">
       <form
         method="post"
         action="/users"
         enctype="multipart/form-data"
         id="add-user-form"
+        novalidate
       >
-        <input type="text" placeholder="enter name" name="name" />
+        <input type="text" placeholder="enter name" name="name" required />
         <p class="error name-error"></p>
 
-        <input type="text" placeholder="enter email" name="email" />
+        <input type="text" placeholder="enter email" name="email" required />
         <p class="error email-error"></p>
 
-        <input type="text" placeholder="enter mobile" name="mobile" />
+        <input type="text" placeholder="enter mobile" name="mobile" required />
         <p class="error mobile-error"></p>
 
-        <input type="password" placeholder="enter password" name="password" />
-        <p class="error passowrd-error"></p>
+        <input type="password" placeholder="enter password" name="password" required />
+        <p class="error password-error"></p>
 
-        <input type="file" name="avatar" />
+        <input type="file" name="avatar" accept="image/*" />
         <p class="error avatar-error"></p>
 
         <p class="common-error"></p>
@@ -33,16 +36,23 @@
     </div>
   </div>
 </div>
+
 <script>
   const modal = document.querySelector("#add-user-modal");
   const form = document.querySelector("#add-user-form");
+  const inputs = form.querySelectorAll("input[required]");
 
-  // success tost
+  /* ---------- Toast ---------- */
   const successToast = Toastify({
     text: "User was added successfully! Reloading the list...",
-    duration: 10000,
+    duration: 3000,
+    gravity: "top",
+    position: "right",
+    close: true,
+    stopOnFocus: true,
   });
 
+  /* ---------- Modal ---------- */
   function closeModal() {
     modal.style.display = "none";
   }
@@ -50,61 +60,155 @@
     modal.style.display = "block";
   }
 
-  // form submit handler
-  form.onsubmit = async function (event) {
-    event.preventDefault();
+  /* ---------- Real-time Validation ---------- */
+  inputs.forEach(input => {
+    input.addEventListener("blur", () => validateField(input));
+    input.addEventListener("input", () => clearFieldError(input));
+  });
 
-    // clear errors first
-    const errorPlaceholders = document.querySelectorAll("p.error");
+  /* ---------- Field Validation ---------- */
+  function validateField(field) {
+    const fieldName = field.name;
+    const value = field.value.trim();
+    const errorElement = document.querySelector(`.${fieldName}-error`);
 
-    for (let i = 0; i < errorPlaceholders.length; i++) {
-      errorPlaceholders[i].style.display = "none";
-    }
+    field.classList.remove("error");
+    errorElement.style.display = "none";
+    errorElement.textContent = "";
 
-    const inputErrors =  document.querySelectorAll("input.error")
+    let isValid = true;
+    let errorMessage = "";
 
-    if(inputErrors.length > 0){
-        for(let j = 0; j<inputErrors.length; j++){
-            inputErrors[j].classList.remove("error")
+    switch(fieldName) {
+      case "name":
+        if (!value) {
+          isValid = false;
+          errorMessage = "Name is required";
+        } else if (!/^[a-zA-Z\s\-]+$/.test(value)) {
+          isValid = false;
+          errorMessage = "Only letters, spaces and hyphens allowed";
         }
+        break;
+
+      case "email":
+        if (!value) {
+          isValid = false;
+          errorMessage = "Email is required";
+        } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+          isValid = false;
+          errorMessage = "Invalid email format";
+        }
+        break;
+
+      case "mobile":
+        if (!value) {
+          isValid = false;
+          errorMessage = "Mobile number is required";
+        } else if (!/^(\+8801|01)[3-9]\d{8}$/.test(value)) {
+          isValid = false;
+          errorMessage = "Invalid Bangladeshi number (01XXXXXXXXX or +8801XXXXXXXXX)";
+        }
+        break;
+
+      case "password":
+        if (!value) {
+          isValid = false;
+          errorMessage = "Password is required";
+        } else if (value.length < 8) {
+          isValid = false;
+          errorMessage = "Minimum 8 characters required";
+        } else if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])/.test(value)) {
+          isValid = false;
+          errorMessage = "Must contain A-Z, a-z, 0-9, special char";
+        }
+        break;
     }
 
-    // prepare the form data
+    if (!isValid) {
+      field.classList.add("error");
+      errorElement.textContent = errorMessage;
+      errorElement.style.display = "block";
+    }
+
+    return isValid;
+  }
+
+  /* ---------- Clear Field Error ---------- */
+  function clearFieldError(field) {
+    const errorElement = document.querySelector(`.${field.name}-error`);
+    field.classList.remove("error");
+    if (errorElement) {
+      errorElement.style.display = "none";
+      errorElement.textContent = "";
+    }
+  }
+
+  /* ---------- Validate Full Form ---------- */
+  function validateForm() {
+    let valid = true;
+    inputs.forEach(input => {
+      if (!validateField(input)) valid = false;
+    });
+    return valid;
+  }
+
+  /* ---------- Clear All Errors ---------- */
+  function clearAllErrors() {
+    document.querySelectorAll("p.error").forEach(p => {
+      p.style.display = "none";
+      p.textContent = "";
+    });
+    document.querySelectorAll("input.error").forEach(i => {
+      i.classList.remove("error");
+    });
+    const common = document.querySelector(".common-error");
+    common.style.display = "none";
+    common.textContent = "";
+  }
+
+  /* ---------- Submit ---------- */
+  form.onsubmit = async function(e) {
+    e.preventDefault();
+    clearAllErrors();
+
+    if (!validateForm()) {
+      const commonError = document.querySelector(".common-error");
+      commonError.textContent = "Please fix the errors above";
+      commonError.style.display = "block";
+      return;
+    }
+
     const formData = new FormData(form);
 
-    // send the request to server
-    let response = await fetch("/users", {
-      method: "POST",
-      body: formData,
-    });
-
-    //get response
-    let result = await response.json();
-
-    // handle error and response
-    if (result.errors) {
-      // errors
-      Object.keys(result.errors).forEach((fieldName) => {
-        // add error class to all inputs
-        form[fieldName].classList.add("error");
-
-        // set all error placeholders (p tag) textContent
-        const errorPlaceholders = document.querySelector(`.${fieldName}-error`);
-        errorPlaceholders.textContent = result.errors[fieldName].msg;
-
-        // make all placeholders visible
-        errorPlaceholders.style.display = "block";
+    try {
+      const response = await fetch("/users", {
+        method: "POST",
+        body: formData
       });
-    } else {
-      //  success
-      successToast.showToast();
-      closeModal();
-      document.querySelector("p.error").style.display = "none";
 
-      // reload the page after 1 second
-      setTimeout(() => {
-        location.reload();
-      }, 1000);
+      const result = await response.json();
+
+      if (result.errors) {
+        Object.keys(result.errors).forEach(field => {
+          if (form[field]) form[field].classList.add("error");
+          const errBox = document.querySelector(`.${field}-error`);
+          if (errBox) {
+            errBox.textContent = result.errors[field].msg;
+            errBox.style.display = "block";
+          }
+        });
+      }
+      else {
+        successToast.showToast();
+        closeModal();
+        clearAllErrors();
+        setTimeout(() => location.reload(), 1000);
+      }
+
+    } catch (err) {
+      const commonError = document.querySelector(".common-error");
+      commonError.textContent = "Server error! Please try again.";
+      commonError.style.display = "block";
     }
   };
 </script>
